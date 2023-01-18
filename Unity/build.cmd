@@ -1,4 +1,3 @@
-@echo off
 REM //---------- copy binaries and include for MavLinkCom in deps ----------
 msbuild AirLibWrapper\AirsimWrapper.sln  /target:Clean /target:Build  /property:Configuration=Release /property:Platform=x64
 if ERRORLEVEL 1 goto :buildfailed

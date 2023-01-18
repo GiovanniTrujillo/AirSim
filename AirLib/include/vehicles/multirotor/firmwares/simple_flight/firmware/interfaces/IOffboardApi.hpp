@@ -4,11 +4,9 @@
 #include "CommonStructs.hpp"
 #include "IGoal.hpp"
 
-namespace simple_flight
-{
+namespace simple_flight {
 
-class IOffboardApi : public IGoal
-{
+class IOffboardApi : public IGoal {
 public:
     virtual bool canRequestApiControl(std::string& message) = 0;
     virtual bool hasApiControl() = 0;
@@ -28,3 +26,4 @@ public:
 };
 
 } //namespace
+

@@ -1,10 +1,8 @@
 #pragma once
 
-namespace simple_flight
-{
+namespace simple_flight {
 
-class IUpdatable
-{
+class IUpdatable {
 public:
     virtual void reset()
     {
@@ -33,4 +31,5 @@ private:
     bool reset_called = false;
     bool update_called = false;
 };
+
 }

@@ -3,12 +3,10 @@
 #include "CommonStructs.hpp"
 #include <algorithm>
 
-namespace simple_flight
-{
+namespace simple_flight {
 
-template <typename T>
-class IPidIntegrator
-{
+template<typename T>
+class IPidIntegrator  {
 public:
     virtual ~IPidIntegrator() {}
     virtual void reset() = 0;

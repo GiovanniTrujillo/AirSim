@@ -9,104 +9,99 @@
 
 using namespace mavlinkcom;
 
-namespace mavlinkcom_impl
-{
+namespace mavlinkcom_impl {
 
-class MavLinkNodeImpl
-{
-public:
-    MavLinkNodeImpl(int localSystemId, int localComponentId);
-    virtual ~MavLinkNodeImpl();
-
-    void connect(std::shared_ptr<MavLinkConnection> connection);
-    void close();
-
-    // Send heartbeat to drone.  You should not do this if some other node is
-    // already doing it.
-    void startHeartbeat();
-
-    std::vector<MavLinkParameter> getParamList();
-
-    // get the parameter value cached from last getParamList call.
-    MavLinkParameter getCachedParameter(const std::string& name);
-
-    // get up to date value of this parametr
-    AsyncResult<MavLinkParameter> getParameter(const std::string& name);
-
-    AsyncResult<bool> setParameter(MavLinkParameter p);
-    AsyncResult<MavLinkAutopilotVersion> getCapabilities();
-
-    // get the connection
-    std::shared_ptr<MavLinkConnection> getConnection()
+    class MavLinkNodeImpl
     {
-        return connection_;
-    }
+    public:
+        MavLinkNodeImpl(int localSystemId, int localComponentId);
+        virtual ~MavLinkNodeImpl();
 
-    std::shared_ptr<MavLinkConnection> ensureConnection()
-    {
-        if (connection_ == nullptr) {
-            throw std::runtime_error("Cannot perform operation as there is no connection, did you forget to call connect() ?");
+        void connect(std::shared_ptr<MavLinkConnection> connection);
+        void close();
+
+        // Send heartbeat to drone.  You should not do this if some other node is
+        // already doing it.
+        void startHeartbeat();
+
+        std::vector<MavLinkParameter> getParamList();
+
+        // get the parameter value cached from last getParamList call.
+        MavLinkParameter getCachedParameter(const std::string& name);
+
+        // get up to date value of this parametr
+        AsyncResult<MavLinkParameter> getParameter(const std::string& name);
+
+        AsyncResult<bool> setParameter(MavLinkParameter p);
+        AsyncResult<MavLinkAutopilotVersion> getCapabilities();
+
+        // get the connection 
+        std::shared_ptr<MavLinkConnection> getConnection()
+        {
+            return connection_;
         }
-        return connection_;
-    }
 
-    int getLocalSystemId()
-    {
-        return local_system_id;
-    }
-    int getLocalComponentId()
-    {
-        return local_component_id;
-    }
+        std::shared_ptr<MavLinkConnection> ensureConnection()
+        {
+            if (connection_ == nullptr)
+            {
+                throw std::runtime_error("Cannot perform operation as there is no connection, did you forget to call connect() ?");
+            }
+            return connection_;
+        }
 
-    int getTargetSystemId()
-    {
-        return ensureConnection()->getTargetSystemId();
-    }
+        int getLocalSystemId() {
+            return local_system_id;
+        }
+        int getLocalComponentId() {
+            return local_component_id;
+        }
 
-    int getTargetComponentId()
-    {
-        return ensureConnection()->getTargetComponentId();
-    }
+        int getTargetSystemId() {
+            return ensureConnection()->getTargetSystemId();
+        }
 
-    void setMessageInterval(int msgId, int frequency);
+        int getTargetComponentId() {
+            return ensureConnection()->getTargetComponentId();
+        }
 
-    AsyncResult<MavLinkHeartbeat> waitForHeartbeat();
+        void setMessageInterval(int msgId, int frequency);
 
-    void sendOneHeartbeat();
+        AsyncResult<MavLinkHeartbeat>  waitForHeartbeat();
 
-    // Encode and send the given message to the connected node
-    void sendMessage(MavLinkMessageBase& msg);
+        void sendOneHeartbeat();
 
-    // Send an already encoded messge to connected node
-    void sendMessage(MavLinkMessage& msg);
+        // Encode and send the given message to the connected node
+        void sendMessage(MavLinkMessageBase& msg);
 
-    // send a command to the remote node
-    void sendCommand(MavLinkCommand& cmd);
+        // Send an already encoded messge to connected node 
+        void sendMessage(MavLinkMessage& msg);
 
-    // send a command to the remote node and return async result that tells you whether ACK was received or not.
-    AsyncResult<bool> sendCommandAndWaitForAck(MavLinkCommand& cmd);
+        // send a command to the remote node
+        void sendCommand(MavLinkCommand& cmd);
 
-protected:
-    // this is called for all messages received on the connection.
-    virtual void handleMessage(std::shared_ptr<MavLinkConnection> connection, const MavLinkMessage& message);
-    void assertNotPublishingThread();
+        // send a command to the remote node and return async result that tells you whether ACK was received or not.
+        AsyncResult<bool> sendCommandAndWaitForAck(MavLinkCommand& cmd);
 
-private:
-    void sendHeartbeat();
-    AsyncResult<MavLinkParameter> getParameterByIndex(int16_t index);
-    bool inside_handle_message_;
-    std::shared_ptr<MavLinkConnection> connection_;
-    int subscription_ = 0;
-    int local_system_id;
-    int local_component_id;
-    std::vector<MavLinkParameter> parameters_; //cached snapshot.
-    MavLinkAutopilotVersion cap_;
-    bool has_cap_ = false;
-    bool req_cap_ = false;
-    bool heartbeat_running_ = false;
-    std::thread heartbeat_thread_;
-};
+    protected:
+        // this is called for all messages received on the connection.
+        virtual void handleMessage(std::shared_ptr<MavLinkConnection> connection, const MavLinkMessage& message);
+        void assertNotPublishingThread();
+    private:
+        void sendHeartbeat();
+        AsyncResult<MavLinkParameter> getParameterByIndex(int16_t index);
+        bool inside_handle_message_;
+        std::shared_ptr<MavLinkConnection> connection_;
+        int subscription_ = 0;
+        int local_system_id;
+        int local_component_id;
+        std::vector<MavLinkParameter> parameters_; //cached snapshot.
+        MavLinkAutopilotVersion cap_;
+        bool has_cap_ = false;
+        bool req_cap_ = false;
+        bool heartbeat_running_ = false;
+        std::thread heartbeat_thread_;
+    };
 }
 
 #endif

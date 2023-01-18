@@ -33,7 +33,6 @@ cmake_install.cmake
 CMakeCache.txt
 
 #Unreal Engine
-/UnrealEngine
 StarterContent/
 Saved/
 !DefaultEditorPerProjectUserSettings.ini #contains use less CPU setting
@@ -287,14 +286,12 @@ ModelManifest.xml
 /cmake/MavLinkCom/Makefile
 /cmake/Makefile
 /cmake/HelloDrone/Makefile
-/cmake/HelloSpawnedDrones/Makefile
 /cmake/DroneShell/Makefile
 /cmake/DroneServer/Makefile
 /cmake/AirLib/Makefile
 /cmake/AirLibUnity/Makefile
 /cmake/AirLibUnity/AirLibUnity
 /cmake/HelloDrone/HelloDrone
-/cmake/HelloSpawnedDrones/HelloSpawnedDrones
 /cmake/DroneShell/DroneShell
 /cmake/DroneServer/DroneServer
 cmake/AirLibUnitTests/Makefile
@@ -361,10 +358,6 @@ xcuserdata/
 !*.xcworkspace/contents.xcworkspacedata
 /*.gcno
 
-# Sublime Text
-*.sublime-workspace
-*.sublime-project
-
 # Unity
 /Unity/UnityDemo/Assembly-CSharp.csproj
 /Unity/UnityDemo/UnityDemo.sln
@@ -385,20 +378,9 @@ ros/logs/
 ros/.catkin_workspace
 ros/src/CMakeLists.txt
 
-# ROS2
-ros2/install/
-ros2/log/
-ros2/src/log
-
 # docs
 docs/README.md
 build_docs/
 
 # api docs
 PythonClient/docs/_build
-
-# Docker
-/docker/Blocks/
-
-# clangd generated folder, for e.g. from VSCode clangd extension
-.cache/

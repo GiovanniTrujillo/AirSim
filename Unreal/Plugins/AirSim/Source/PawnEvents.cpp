@@ -8,4 +8,5 @@ PawnEvents::CollisionSignal& PawnEvents::getCollisionSignal()
 PawnEvents::PawnTickSignal& PawnEvents::getPawnTickSignal()
 {
     return pawn_tick_signal_;
+
 }

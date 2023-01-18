@@ -18,8 +18,7 @@ AdHocConnectionImpl::AdHocConnectionImpl()
     ::memset(&mavlink_intermediate_status_, 0, sizeof(mavlink_status_t));
     ::memset(&mavlink_status_, 0, sizeof(mavlink_status_t));
 }
-std::string AdHocConnectionImpl::getName()
-{
+std::string AdHocConnectionImpl::getName() {
     return name;
 }
 
@@ -29,7 +28,7 @@ AdHocConnectionImpl::~AdHocConnectionImpl()
     close();
 }
 
-std::shared_ptr<AdHocConnection> AdHocConnectionImpl::createConnection(const std::string& nodeName, std::shared_ptr<Port> port)
+std::shared_ptr<AdHocConnection>  AdHocConnectionImpl::createConnection(const std::string& nodeName, std::shared_ptr<Port> port)
 {
     // std::shared_ptr<MavLinkCom> owner, const std::string& nodeName
     std::shared_ptr<AdHocConnection> con = std::make_shared<AdHocConnection>();
@@ -37,7 +36,7 @@ std::shared_ptr<AdHocConnection> AdHocConnectionImpl::createConnection(const std
     return con;
 }
 
-std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectLocalUdp(const std::string& nodeName, std::string localAddr, int localPort)
+std::shared_ptr<AdHocConnection>  AdHocConnectionImpl::connectLocalUdp(const std::string& nodeName, std::string localAddr, int localPort)
 {
     std::shared_ptr<UdpClientPort> socket = std::make_shared<UdpClientPort>();
 
@@ -46,10 +45,10 @@ std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectLocalUdp(const std:
     return createConnection(nodeName, socket);
 }
 
-std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectRemoteUdp(const std::string& nodeName, std::string localAddr, std::string remoteAddr, int remotePort)
+std::shared_ptr<AdHocConnection>  AdHocConnectionImpl::connectRemoteUdp(const std::string& nodeName, std::string localAddr, std::string remoteAddr, int remotePort)
 {
     std::string local = localAddr;
-    // just a little sanity check on the local address, if remoteAddr is localhost then localAddr must be also.
+    // just a little sanity check on the local address, if remoteAddr is localhost then localAddr must be also. 
     if (remoteAddr == "127.0.0.1") {
         local = "127.0.0.1";
     }
@@ -61,10 +60,10 @@ std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectRemoteUdp(const std
     return createConnection(nodeName, socket);
 }
 
-std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectTcp(const std::string& nodeName, std::string localAddr, const std::string& remoteIpAddr, int remotePort)
+std::shared_ptr<AdHocConnection>  AdHocConnectionImpl::connectTcp(const std::string& nodeName, std::string localAddr, const std::string& remoteIpAddr, int remotePort)
 {
     std::string local = localAddr;
-    // just a little sanity check on the local address, if remoteAddr is localhost then localAddr must be also.
+    // just a little sanity check on the local address, if remoteAddr is localhost then localAddr must be also. 
     if (remoteIpAddr == "127.0.0.1") {
         local = "127.0.0.1";
     }
@@ -76,7 +75,7 @@ std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectTcp(const std::stri
     return createConnection(nodeName, socket);
 }
 
-std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectSerial(const std::string& nodeName, std::string name, int baudRate, const std::string initString)
+std::shared_ptr<AdHocConnection>  AdHocConnectionImpl::connectSerial(const std::string& nodeName, std::string name, int baudRate, const std::string initString)
 {
     std::shared_ptr<SerialPort> serial = std::make_shared<SerialPort>();
 
@@ -84,7 +83,7 @@ std::shared_ptr<AdHocConnection> AdHocConnectionImpl::connectSerial(const std::s
     if (hr != 0)
         throw std::runtime_error(Utils::stringf("Could not open the serial port %s, error=%d", name.c_str(), hr));
 
-    // send this right away just in case serial link is not already configured
+    // send this right away just in case serial link is not already configured 
     if (initString.size() > 0) {
         serial->write(reinterpret_cast<const uint8_t*>(initString.c_str()), static_cast<int>(initString.size()));
     }
@@ -151,9 +150,10 @@ void AdHocConnectionImpl::sendMessage(const std::vector<uint8_t>& msg)
     }
 }
 
+
 int AdHocConnectionImpl::subscribe(AdHocMessageHandler handler)
 {
-    MessageHandlerEntry entry{ static_cast<int>(listeners.size() + 1), handler };
+    MessageHandlerEntry entry = { static_cast<int>(listeners.size() + 1), handler = handler };
     std::lock_guard<std::mutex> guard(listener_mutex);
     listeners.push_back(entry);
     snapshot_stale = true;
@@ -162,8 +162,10 @@ int AdHocConnectionImpl::subscribe(AdHocMessageHandler handler)
 void AdHocConnectionImpl::unsubscribe(int id)
 {
     std::lock_guard<std::mutex> guard(listener_mutex);
-    for (auto ptr = listeners.begin(), end = listeners.end(); ptr != end; ptr++) {
-        if ((*ptr).id == id) {
+    for (auto ptr = listeners.begin(), end = listeners.end(); ptr != end; ptr++)
+    {
+        if ((*ptr).id == id)
+        {
             listeners.erase(ptr);
             snapshot_stale = true;
             break;
@@ -180,9 +182,11 @@ void AdHocConnectionImpl::readPackets()
     uint8_t* buffer = new uint8_t[MAXBUFFER];
     int channel = 0;
     int hr = 0;
-    while (hr == 0 && con_ != nullptr && !closed) {
+    while (hr == 0 && con_ != nullptr && !closed)
+    {
         int read = 0;
-        if (safePort->isClosed()) {
+        if (safePort->isClosed())
+        {
             // hmmm, wait till it is opened?
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
@@ -218,7 +222,7 @@ void AdHocConnectionImpl::readPackets()
 
     } //while
 
-    delete[] buffer;
+    delete[]  buffer;
 
 } //readPackets
 
@@ -236,7 +240,8 @@ void AdHocConnectionImpl::drainQueue()
                 hasMsg = true;
             }
         }
-        if (!hasMsg) {
+        if (!hasMsg)
+        {
             return;
         }
         // publish the message from this thread, this is safer than publishing from the readPackets thread
@@ -255,15 +260,14 @@ void AdHocConnectionImpl::drainQueue()
 
         auto startTime = std::chrono::system_clock::now();
         std::shared_ptr<AdHocConnection> sharedPtr = std::shared_ptr<AdHocConnection>(this->con_);
-        for (auto ptr = snapshot.begin(); ptr != end; ptr++) {
+        for (auto ptr = snapshot.begin(); ptr != end; ptr++)
+        {
             try {
                 (*ptr).handler(sharedPtr, message);
             }
             catch (std::exception& e) {
                 Utils::log(Utils::stringf("AdHocConnectionImpl: Error handling message on connection '%s', details: %s",
-                                          name.c_str(),
-                                          e.what()),
-                           Utils::kLogLevelError);
+                    name.c_str(), e.what()), Utils::kLogLevelError);
             }
         }
     }
@@ -282,3 +286,5 @@ void AdHocConnectionImpl::publishPackets()
         waiting_for_msg_ = false;
     }
 }
+
+

@@ -13,9 +13,8 @@ namespace AirSimUnity {
         [DllImport(DLL_NAME)]
         public static extern void InitVehicleManager(IntPtr SetPose, IntPtr GetPose, IntPtr GetCollisionInfo, IntPtr GetRCData,
             IntPtr GetSimImages, IntPtr SetRotorSpeed, IntPtr SetEnableApi, IntPtr SetCarApiControls, IntPtr GetCarState,
-            IntPtr GetCameraInfo, IntPtr SetCameraPose, IntPtr SetCameraFoV, IntPtr SetDistortionParam, IntPtr GetDistortionParams,
-            IntPtr SetSegmentationObjectId, IntPtr GetSegmentationObjectId, IntPtr PrintLogMessage, IntPtr GetTransformFromUnity, 
-            IntPtr Reset, IntPtr GetVelocity, IntPtr GetRayCastHit, IntPtr Pause);
+            IntPtr GetCameraInfo, IntPtr SetCameraPose, IntPtr SetCameraFoV, IntPtr SetSegmentationObjectid, IntPtr GetSegmentationObjectId,
+            IntPtr PrintLogMessage, IntPtr GetTransformFromUnity, IntPtr Reset, IntPtr GetVelocity, IntPtr GetRayCastHit, IntPtr Pause);
 
         [DllImport(DLL_NAME)]
         public static extern KinemticState GetKinematicState(string vehicleName);
@@ -27,15 +26,15 @@ namespace AirSimUnity {
         public static extern void StopDroneServer(string vehicleName);
 
         [DllImport(DLL_NAME)]
-        public static extern bool StartServer(string simModeName, int portNumber);
+        public static extern bool StartServer(string vehicleName, string simModeName, int portNumber);
 
         [DllImport(DLL_NAME)]
-        public static extern void StopServer();
+        public static extern void StopServer(string vehicleName);
 
         [DllImport(DLL_NAME)]
         public static extern void CallTick(float deltaSeconds);
 
         [DllImport(DLL_NAME)]
-        public static extern void InvokeCollisionDetection(string vehicleName, CollisionInfo collisionInfo);
+        public static extern void InvokeCollisionDetection(CollisionInfo collisionInfo);
     }
 }

@@ -18,7 +18,7 @@ namespace AirSimUnity {
 
         private Camera myCamera;
 
-        private static readonly Dictionary<string, int> segmentationIds = new Dictionary<string, int>();
+        private static Dictionary<string, int> segmentationIds = new Dictionary<string, int>();
 
         private void Start() {
             myCamera = GetComponent<Camera>();
@@ -39,7 +39,7 @@ namespace AirSimUnity {
             UpdateCameraEffect();
         }
 
-        private ImageType Effects {
+        public ImageType Effects {
             get {
                 return effect;
             }

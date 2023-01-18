@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace LogViewer.Model
 {
@@ -21,39 +24,13 @@ namespace LogViewer.Model
         // the IDataLog implementor can use this field instead.
         public int Id { get; set; }
 
-        private List<LogItemSchema> childItems;
-
-        public LogItemSchema()
-        {
-        }
-
-        public string GetFullName()
-        {
-            if (Parent != null)
-            {
-                return Parent.GetFullName() + "." + Name;
-            }
-            return Name;
-        }
-
-        public List<LogItemSchema> CopyChildren()
-        {
-            var list = this.childItems;
-            if (list == null)
-            {
-                return new List<LogItemSchema>();
-            }
-            lock (list)
-            {
-                return new List<LogItemSchema>(list);
-            }
-        }
+        public List<LogItemSchema> ChildItems { get; set; }
 
         public bool HasChildren
         {
             get
-            {                
-                return childItems != null && childItems.Count > 0;
+            {
+                return ChildItems != null && ChildItems.Count > 0;
             }
         }
 
@@ -79,39 +56,30 @@ namespace LogViewer.Model
             }
         }
 
-        public bool IsArray { get; internal set; }
-
         internal void Combine(LogItemSchema s)
         {
             Dictionary<string, LogItemSchema> index = new Dictionary<string, Model.LogItemSchema>();
-            
             if (this.HasChildren)
             {
-                lock (this.childItems)
+                foreach (var i in this.ChildItems.ToArray())
                 {
-                    foreach (var i in this.childItems)
-                    {
-                        index[i.Name] = i;
-                    }
+                    index[i.Name] = i;
                 }
             }
             if (s.HasChildren)
             {
-                lock (s.childItems)
+                foreach (var child in s.ChildItems.ToArray())
                 {
-                    foreach (var child in s.childItems)
+                    LogItemSchema found = null;
+                    if (index.TryGetValue(child.Name, out found))
                     {
-                        LogItemSchema found = null;
-                        if (index.TryGetValue(child.Name, out found))
-                        {
-                            found.Combine(child);
-                        }
-                        else
-                        {
-                            LogItemSchema copy = child.Clone();
-                            copy.Parent = this;
-                            this.AddChild(child);
-                        }
+                        found.Combine(child);
+                    }
+                    else
+                    {
+                        LogItemSchema copy = child.Clone();
+                        copy.Parent = this;
+                        this.ChildItems.Add(child);
                     }
                 }
             }
@@ -122,44 +90,17 @@ namespace LogViewer.Model
             LogItemSchema copy = new LogItemSchema() { Id = this.Id, Name = this.Name, Type = this.Type };
             if (this.HasChildren)
             {
-                lock (this.childItems)
+                List<LogItemSchema> copyChildren = new List<Model.LogItemSchema>();
+                foreach (var child in this.ChildItems.ToArray())
                 {
-                    foreach (var child in this.childItems)
-                    {
-                        var childClone = child.Clone();
-                        copy.AddChild(childClone);
-                    }
+                    var childClone = child.Clone();
+                    childClone.Parent = copy;
+                    copyChildren.Add(childClone);
                 }
+                copy.ChildItems = copyChildren;
             }
             return copy;
         }
-
-        internal bool HasChild(string name)
-        {
-            if (this.childItems == null)
-            {
-                return false;
-            }
-            lock (this.childItems) 
-            {
-                return (from c in this.childItems where c.Name == name select c).Any();
-            }
-        }
-
-        internal void AddChild(LogItemSchema item)
-        {
-            if (this.childItems == null)
-            {
-                this.childItems = new List<LogItemSchema>();
-            }
-            item.Parent = this;
-
-            lock (this.childItems)
-            {
-                this.childItems.Add(item);
-            }
-        }
-
     }
 
 }

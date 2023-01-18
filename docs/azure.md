@@ -3,16 +3,16 @@
 This document explains how to automate the creation of a development environment on Azure and code and debug a Python application connected to AirSim using Visual Studio Code
 
 ## Automatically Deploy Your Azure VM
-Click the blue button to start the Azure deployment (The template is pre-filled with the recommended virtual machine size for the use cases of the following two tutorials)
+Use [this](https://github.com/microsoft/AirSim/blob/master/azure/azure-env-creation/vm-arm-template.json) template to create, deploy and configure an Azure VM to work with AirSim 
 
+*Note: the VM deployment and configuration process may take 20+ minutes to complete*
 
 <a href="https://aka.ms/AA8umgt" target="_blank">
     <img src="https://azuredeploy.net/deploybutton.png"/>
-</a>  
-*Note: the VM deployment and configuration process may take 20+ minutes to complete*
+</a>
 
 ### Regarding the deployment of the Azure VM
-- When using an Azure Trial account, the default vCPU quota is not enough to allocate the required VM to run AirSim. If that's the case, you will see an error when trying to create the VM and will have to submit a request for Quota increase. **Be sure to understand how and how much you are going to be charged for the use of the VM**
+- When using an Azure Trial account, the default vCPU quota may not be enough to allocate the required VM to run AirSim. If that's the case, you will see an error when trying to create the VM and will have to make a support request to increase the default quota.
 
 - To avoid charges for the Virtual Machine usage while not in use, remember to deallocate its resources from the [Azure Portal](https://portal.azure.com) or use the following command from the Azure CLI:
 ```bash
@@ -55,7 +55,7 @@ Once both the AirSim environment and the Python application are ready, you can p
 
 This would be a perfect scenario when you want to run the simulation at scale. For instance, you could have several different configurations for the same simulation and execute them in a parallel, unattended way using a Docker image on Azure Container Services
 
-Since AirSim requires access to the host GPU, it is required to use a Docker runtime that supports it. For more information about running AirSim in Docker, click [here](docker_ubuntu.md).
+Since AirSim requires access to the host GPU, it is required to use a Docker runtime that supports it. For more information about running AirSim in Docker, click [here](https://github.com/microsoft/AirSim/blob/master/docs/docker_ubuntu.md).
 
 When using Azure Container Services to run this image, the only extra-requirement is to add GPU support to the Container Group where it will be deployed. 
 
@@ -72,12 +72,12 @@ docker build -t <your-registry-url>/<your-image-name> -f ./docker/Dockerfile .`
 To use a different AirSim binary, first check the official documentation on [How to Build AirSim on Windows](build_windows.md) and [How to Build AirSim on Linux](build_linux.md) if you also want to run it with Docker
 
 Once you have a zip file with the new AirSim environment (or prefer to use one from the [Official Releases](https://github.com/microsoft/AirSim/releases)), you need to modify some of the scripts in the `azure` directory of the repository to point to the new environment:
-- In [`azure/azure-env-creation/configure-vm.ps1`](https://github.com/microsoft/AirSim/blob/main/azure/azure-env-creation/configure-vm.ps1), modify all the parameters starting with `$airSimBinary` with the new values
-- In [`azure/start-airsim.ps1`](https://github.com/microsoft/AirSim/blob/main/azure/start-airsim.ps1), modify `$airSimExecutable` and `$airSimProcessName` with the new values
+- In [`azure/azure-env-creation/configure-vm.ps1`](https://github.com/microsoft/AirSim/blob/master/azure/azure-env-creation/configure-vm.ps1), modify all the parameters starting with `$airSimBinary` with the new values
+- In [`azure/start-airsim.ps1`](https://github.com/microsoft/AirSim/blob/master/azure/start-airsim.ps1), modify `$airSimExecutable` and `$airSimProcessName` with the new values
 
 If you are using the docker image, you also need a linux binary zip file and modify the following Docker-related files:
-- In [`azure/docker/Dockerfile`](https://github.com/microsoft/AirSim/blob/main/azure/docker/Dockerfile), modify the `AIRSIM_BINARY_ZIP_URL` and `AIRSIM_BINARY_ZIP_FILENAME` ENV declarations with the new values
-- In [`azure/docker/docker-entrypoint.sh`](https://github.com/microsoft/AirSim/blob/main/azure/docker/docker-entrypoint.sh), modify `AIRSIM_EXECUTABLE` with the new value 
+- In [`azure/docker/Dockerfile`](https://github.com/microsoft/AirSim/blob/master/azure/docker/Dockerfile), modify the `AIRSIM_BINARY_ZIP_URL` and `AIRSIM_BINARY_ZIP_FILENAME` ENV declarations with the new values
+- In [`azure/docker/docker-entrypoint.sh`](https://github.com/microsoft/AirSim/blob/master/azure/docker/docker-entrypoint.sh), modify `AIRSIM_EXECUTABLE` with the new value 
 
 ## Maintaining this development environment
 

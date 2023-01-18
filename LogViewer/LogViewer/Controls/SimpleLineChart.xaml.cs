@@ -44,11 +44,6 @@ namespace LogViewer.Controls
             minY = Math.Min(minY, y);
             maxY = Math.Max(maxY, y);
         }
-
-        public override string ToString()
-        {
-            return string.Format("X: {0}, {1}, Y: {2}, {3}", minX, maxX, minY, maxY);
-        }
     }
 
     public static class SimpleLineChartCommands
@@ -107,10 +102,7 @@ namespace LogViewer.Controls
 
         void SimpleLineChart_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (e.NewSize != layoutSize)
-            {
-                UpdateChart();
-            }
+            UpdateChart();
         }
 
         /// <summary>
@@ -138,18 +130,14 @@ namespace LogViewer.Controls
             get { return liveScrolling; }
             set
             {
-                if (value != liveScrolling)
+                liveScrolling = value;
+                if (value)
                 {
-                    liveScrolling = value;
-                    if (value)
-                    {
-                        TrimToLiveScroll();
-                        StartUpdateTimer();
-                    }
-                    else
-                    {
-                        StopUpdateTimer();
-                    }
+                    StartUpdateTimer();
+                }
+                else
+                {
+                    StopUpdateTimer();
                 }
             }
         }
@@ -228,10 +216,6 @@ namespace LogViewer.Controls
 
         internal void ZoomTo(double x, double width)
         {
-            if (this.liveScrolling)
-            {
-                return;
-            }
             int i = GetIndexFromX(x);
             if (i == -1)
             {
@@ -240,7 +224,7 @@ namespace LogViewer.Controls
             }
             this.visibleStartIndex = i;
             this.visibleEndIndex = GetIndexFromX(x + width);
-            this.dirty = true;
+            
             var info = ComputeScaleSelf();
             ApplyScale(info);
 
@@ -249,17 +233,10 @@ namespace LogViewer.Controls
 
         internal void ResetZoom()
         {
-            if (this.liveScrolling)
-            {
-                return;
-            }
-            this.dirty = true;
             this.visibleStartIndex = 0;
             this.visibleEndIndex = -1;
             this.smoothScrollScaleIndex = 0;
             this.scaleSelf = new ChartScaleInfo();
-            var info = ComputeScaleSelf();
-            ApplyScale(info);
             InvalidateArrange();
         }
         
@@ -315,7 +292,7 @@ namespace LogViewer.Controls
             int startIndex = this.visibleStartIndex;
             int endIndex = this.visibleEndIndex;
 
-            if (!dirty && scaleSelf != null && !this.liveScrolling)
+            if (!dirty && scaleSelf != null)
             {
                 return scaleSelf;
             }
@@ -352,7 +329,6 @@ namespace LogViewer.Controls
                 scaleSelf.Add(x, y);
             }
             this.smoothScrollScaleIndex = endIndex;
-
             return scaleSelf;
         }
 
@@ -424,7 +400,6 @@ namespace LogViewer.Controls
                 m.OffsetX = -minX * xScale;
                 m.OffsetY = -minY * yScale;
                 scaleTransform = new MatrixTransform(m);
-                this.dirty = true;
             }
 
             return changed;
@@ -446,9 +421,10 @@ namespace LogViewer.Controls
             this.series.Values.Add(copy);
 
             PathGeometry g = Graph.Data as PathGeometry;
-            if (g == null || this.dirty)
+            if (g == null)
             {
                 UpdateChart();
+                return;
             }
             PathFigure f = g.Figures[0];
 
@@ -482,51 +458,12 @@ namespace LogViewer.Controls
             }
         }
 
-        private void TrimToLiveScroll()
-        {
-            double scaleX = this.liveScrollingXScale;
-
-            this.visibleEndIndex = series.Values.Count;
-            this.visibleStartIndex = this.visibleEndIndex;
-            var width = this.ActualWidth;
-
-            // find the data value that starts the chart on the left side of the scrolling window
-            // and make this the visibleStartIndex from which smooth scrolling will resume.
-            if (series.Values.Count > 0)
-            {
-                // walk back until the scaled values fill one screen width.
-                this.visibleStartIndex = this.visibleEndIndex - 1;
-                var dv = series.Values[this.visibleStartIndex];
-                double endX = dv.X * scaleX;
-
-                while (--this.visibleStartIndex > 0)
-                {
-                    dv = series.Values[this.visibleStartIndex];
-                    double startX = dv.X * scaleX;
-
-                    if (endX - startX > width)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            this.scaleSelf = null;
-            this.dirty = true;
-        }
-
-
-        Size layoutSize;
-
         void UpdateChart()
         {
             if (this.series == null)
             {
                 this.series = new DataSeries() { Name = "", Values = new List<DataValue>() };
             }
-
-            this.dirty = false;
-            layoutSize = new Size(this.ActualWidth, this.ActualHeight);
             Canvas.SetLeft(Graph, 0);
             visibleCount = 0;
             this.smoothScrollIndex = 0;
@@ -576,9 +513,8 @@ namespace LogViewer.Controls
             }
 
             double count = series.Values.Count;
-            PathGeometry g = new PathGeometry();            
+            PathGeometry g = new PathGeometry();
             PathFigure f = new PathFigure();
-            f.IsClosed = false;
             g.Figures.Add(f);
 
             AddScaledValues(f, this.visibleStartIndex, this.visibleEndIndex);
@@ -589,8 +525,6 @@ namespace LogViewer.Controls
 
             UpdatePointer(lastMousePosition);
             EnableMenuItems();
-
-            _delayedUpdates.StartDelayedAction("RepositionTips", () => { RepositionTips(); }, TimeSpan.FromMilliseconds(30));
         }
 
         private void EnableMenuItems()
@@ -610,9 +544,6 @@ namespace LogViewer.Controls
             if (start < 0) start = 0;
 
             bool started = (figure.Segments.Count > 0);
-            double sum = 0;
-            double count = 0;
-            int previousX = -1;
             for (int i = start; i < end; i++)
             {
                 DataValue d = series.Values[i];
@@ -621,40 +552,18 @@ namespace LogViewer.Controls
                 Point pt = GetScaledValue(d);
 
                 double rx = pt.X + offset;
+
                 if (pt.X >= 0)
                 {
-                    if (visibleCount == 0)
-                    {
-                        previousX = (int)rx;
-                    }
                     visibleCount++;
                     if (!started)
                     {
                         figure.StartPoint = pt;
                         started = true;
-                        previousX = (int)rx;
                     }
                     else
                     {
-                        if (previousX == (int)rx)
-                        {
-                            sum += pt.Y;
-                            count++;
-                        }
-                        else if (count > 0)
-                        {
-                            // this helps WPF scale better.
-                            pt = new Point(pt.X, sum / count);
-                            figure.Segments.Add(new LineSegment() { Point = pt });
-                            count = 0;
-                            sum = 0;
-                            previousX = (int)pt.X;
-                        } 
-                        else
-                        {
-                            previousX = (int)pt.X;
-                            figure.Segments.Add(new LineSegment() { Point = pt });
-                        }
+                        figure.Segments.Add(new LineSegment() { Point = pt });
                     }
                 }
             }
@@ -741,8 +650,9 @@ namespace LogViewer.Controls
                 this.Stroke = new SolidColorBrush(value);
 
                 HlsColor darker = new HlsColor(value);
-                darker.Darken(0.25f);
+                darker.Darken(0.33f);
                 PointerBorder.BorderBrush = Pointer.Fill = PointerLabel.Foreground = new SolidColorBrush(darker.Color);
+
             }
         }
 
@@ -835,8 +745,7 @@ namespace LogViewer.Controls
                 double offset = Canvas.GetLeft(Graph);
                 double x = pt.X + offset;
                 double y = pt.Y;
-                ShowTip(series.Name + " = " + (!string.IsNullOrEmpty(found.Label) ? found.Label : found.Y.ToString() + "\n" +
-                    "time = " + found.X.ToString()), new Point(x, y), found);
+                ShowTip(series.Name + " = " + (!string.IsNullOrEmpty(found.Label) ? found.Label : found.Y.ToString()), new Point(x, y), found);
             }
             else
             {
@@ -858,7 +767,7 @@ namespace LogViewer.Controls
                     DataValue endData = series.Values[e];
                     Point tipPosition = this.TransformToDescendant(Graph).Transform(localEndPos);
                     double microseconds = endData.X - startData.X;
-                    TimeSpan span = TimeSpan.FromMilliseconds((double)microseconds / 1000.0);
+                    TimeSpan span = new TimeSpan((long)microseconds * 10);
                     double seconds = span.TotalSeconds;
                     double diff = endData.Y - startData.Y;
                     double sum = 0;
@@ -904,13 +813,6 @@ namespace LogViewer.Controls
             {
                 tipPositionY = 0;
             }
-
-            Size closeBoxSize = CloseBox.DesiredSize;
-            if (tipPositionX == this.ActualWidth - PointerBorder.ActualWidth && tipPositionY < closeBoxSize.Height)
-            {
-                tipPositionX -= closeBoxSize.Width;
-            }
-
             PointerBorder.Margin = new Thickness(tipPositionX, tipPositionY, 0, 0);
             PointerBorder.Visibility = System.Windows.Visibility.Visible;
             PointerBorder.Data = data;
@@ -954,12 +856,10 @@ namespace LogViewer.Controls
 
         protected override Size ArrangeOverride(Size arrangeBounds)
         {
-            if (arrangeBounds != layoutSize || this.dirty)
-            { 
-                this.dirty = true;
-                DelayedUpdate();
-            }
+            this.dirty = true;
+            DelayedUpdate();
             HidePointer();
+            _delayedUpdates.StartDelayedAction("RepositionTips", () => { RepositionTips(); }, TimeSpan.FromMilliseconds(30));
             return base.ArrangeOverride(arrangeBounds);
         }
 
@@ -1104,7 +1004,7 @@ namespace LogViewer.Controls
                 // then it is a visible point.
                 if (first == null) first = d;
                 last = d;
-                points.Add(GetScaledValue(d));
+                points.Add(new Point(d.X, d.Y));
             }
             if (first == null)
             {
@@ -1113,33 +1013,41 @@ namespace LogViewer.Controls
             double a, b; //  y = a + b.x
             MathHelpers.LinearRegression(points, out a, out b);
 
-            Point point1 = points.First();
-            Point point2 = points.Last();
+            Point start = new Point(first.X, a + (b * first.X));
+            Point end = new Point(last.X, a + (b * last.X));
 
-            Point start = new Point(point1.X, a + (b * point1.X));
-            Point end = new Point(point2.X, a + (b * point2.X));
+            double height = this.ActualHeight - 1;
+            double availableHeight = height;
+            
+            // scale start point
+            Point point1 = scaleTransform.Transform(start);
+            double y1 = availableHeight - point1.Y;
+
+            // scale end point
+            Point point2 = scaleTransform.Transform(end);
+            double y2 = availableHeight - point2.Y;
 
             Line line = new Line() {
-                Stroke = Graph.Stroke, StrokeThickness = 1, X1 = start.X, Y1 = start.Y, X2 = end.X, Y2 = end.Y,            
+                Stroke = Graph.Stroke, StrokeThickness = 1, X1 = point1.X, Y1 = y1, X2 = point2.X, Y2 = y2,            
                 StrokeDashArray = new DoubleCollection(new double[] { 2, 2 })
             };
             AdornerCanvas.Children.Add(line);
 
             TextBlock startLabel = new TextBlock() {
-                Text = String.Format("{0:N3}", first.Y),
+                Text = String.Format("{0:N3}", start.Y),
                 Foreground = Brushes.White,
-                Margin = new Thickness(start.X, start.Y + 2, 0, 0)
+                Margin = new Thickness(point1.X, y1 + 2, 0, 0)
             };
             AdornerCanvas.Children.Add(startLabel);
 
             TextBlock endlabel = new TextBlock()
             {
-                Text = String.Format("{0:N3}", last.Y),
+                Text = String.Format("{0:N3}", end.Y),
                 Foreground = Brushes.White
             };
             endlabel.SizeChanged += (s, args) =>
             {
-                endlabel.Margin = new Thickness(end.X - args.NewSize.Width - 10, end.Y + 2, 0, 0);
+                endlabel.Margin = new Thickness(point2.X - args.NewSize.Width - 10, y2 + 2, 0, 0);
             };
 
             AdornerCanvas.Children.Add(endlabel);
@@ -1250,20 +1158,25 @@ namespace LogViewer.Controls
             Point start = new Point(first.X, mean);
             Point end = new Point(last.X, mean);
 
+            double height = this.ActualHeight - 1;
+            double availableHeight = height;
+
             // scale start point
-            Point point1 = GetScaledValue(new DataValue() { X = start.X, Y = start.Y });
+            Point point1 = scaleTransform.Transform(start);
+            double y1 = availableHeight - point1.Y;
 
             // scale end point
-            Point point2 = GetScaledValue(new DataValue() { X = end.X, Y = end.Y });
+            Point point2 = scaleTransform.Transform(end);
+            double y2 = availableHeight - point2.Y;
 
             Line line = new Line()
             {
                 Stroke = Brushes.White,
                 StrokeThickness = 1,
                 X1 = point1.X,
-                Y1 = point1.Y,
+                Y1 = y1,
                 X2 = point2.X,
-                Y2 = point2.Y,
+                Y2 = y2,
                 StrokeDashArray = new DoubleCollection(new double[] { 2, 2 })
             };
             AdornerCanvas.Children.Add(line);
@@ -1272,7 +1185,7 @@ namespace LogViewer.Controls
             {
                 Text = String.Format("{0:N3}", start.Y),
                 Foreground = Brushes.White,
-                Margin = new Thickness(point1.X, point1.Y + 2, 0, 0)
+                Margin = new Thickness(point1.X, y1 + 2, 0, 0)
             };
             AdornerCanvas.Children.Add(startLabel);
 
@@ -1283,7 +1196,7 @@ namespace LogViewer.Controls
             };
             endlabel.SizeChanged += (s, args) =>
             {
-                endlabel.Margin = new Thickness(point2.X - args.NewSize.Width - 10, point2.Y + 2, 0, 0);
+                endlabel.Margin = new Thickness(point2.X - args.NewSize.Width - 10, y2 + 2, 0, 0);
             };
 
             AdornerCanvas.Children.Add(endlabel);

@@ -12,99 +12,96 @@
 #include "common/DelayLine.hpp"
 #include "common/FrequencyLimiter.hpp"
 
-namespace msr
-{
-namespace airlib
-{
+namespace msr { namespace airlib {
 
-    class DistanceSimple : public DistanceBase
+class DistanceSimple : public DistanceBase {
+public:
+    DistanceSimple(const AirSimSettings::DistanceSetting& setting = AirSimSettings::DistanceSetting())
+        : DistanceBase(setting.sensor_name)
     {
-    public:
-        DistanceSimple(const AirSimSettings::DistanceSetting& setting = AirSimSettings::DistanceSetting())
-            : DistanceBase(setting.sensor_name)
-        {
-            // initialize params
-            params_.initializeFromSettings(setting);
+        // initialize params
+        params_.initializeFromSettings(setting);
 
-            uncorrelated_noise_ = RandomGeneratorGausianR(0.0f, params_.uncorrelated_noise_sigma);
-            //correlated_noise_.initialize(params_.correlated_noise_tau, params_.correlated_noise_sigma, 0.0f);
+        uncorrelated_noise_ = RandomGeneratorGausianR(0.0f, params_.unnorrelated_noise_sigma);
+        //correlated_noise_.initialize(params_.correlated_noise_tau, params_.correlated_noise_sigma, 0.0f);
 
-            //initialize frequency limiter
-            freq_limiter_.initialize(params_.update_frequency, params_.startup_delay);
-            delay_line_.initialize(params_.update_latency);
-        }
 
-        //*** Start: UpdatableState implementation ***//
-        virtual void resetImplementation() override
-        {
-            //correlated_noise_.reset();
-            uncorrelated_noise_.reset();
+        //initialize frequency limiter
+        freq_limiter_.initialize(params_.update_frequency, params_.startup_delay);
+        delay_line_.initialize(params_.update_latency);
+    }
 
-            freq_limiter_.reset();
-            delay_line_.reset();
+    //*** Start: UpdatableState implementation ***//
+    virtual void resetImplementation() override
+    {
+        //correlated_noise_.reset();
+        uncorrelated_noise_.reset();
 
+        freq_limiter_.reset();
+        delay_line_.reset();
+
+        delay_line_.push_back(getOutputInternal());
+    }
+
+    virtual void update() override
+    {
+        DistanceBase::update();
+
+        freq_limiter_.update();
+
+        if (freq_limiter_.isWaitComplete()) {
             delay_line_.push_back(getOutputInternal());
         }
 
-        virtual void update() override
-        {
-            DistanceBase::update();
+        delay_line_.update();
 
-            freq_limiter_.update();
+        if (freq_limiter_.isWaitComplete())
+            setOutput(delay_line_.getOutput());
+    }
+    //*** End: UpdatableState implementation ***//
 
-            if (freq_limiter_.isWaitComplete()) {
-                delay_line_.push_back(getOutputInternal());
-            }
+    virtual ~DistanceSimple() = default;
 
-            delay_line_.update();
+    const DistanceSimpleParams& getParams() const
+    {
+        return params_;
+    }
 
-            if (freq_limiter_.isWaitComplete())
-                setOutput(delay_line_.getOutput());
-        }
-        //*** End: UpdatableState implementation ***//
+protected:
+    virtual real_T getRayLength(const Pose& pose) = 0;
 
-        virtual ~DistanceSimple() = default;
+private: //methods
+    DistanceSensorData getOutputInternal()
+    {
+        DistanceSensorData output;
+        const GroundTruth& ground_truth = getGroundTruth();
 
-        const DistanceSimpleParams& getParams() const
-        {
-            return params_;
-        }
+        //order of Pose addition is important here because it also adds quaternions which is not commutative!
+        auto distance = getRayLength(params_.relative_pose + ground_truth.kinematics->pose);
 
-    protected:
-        virtual real_T getRayLength(const Pose& pose) = 0;
+        //add noise in distance (about 0.2m sigma)
+        distance += uncorrelated_noise_.next();
 
-    private: //methods
-        DistanceSensorData getOutputInternal()
-        {
-            DistanceSensorData output;
-            const GroundTruth& ground_truth = getGroundTruth();
+        output.distance = distance;
+        output.min_distance = params_.min_distance;
+        output.max_distance = params_.max_distance;
+        output.relative_pose = params_.relative_pose;
+        output.time_stamp = clock()->nowNanos();
 
-            //order of Pose addition is important here because it also adds quaternions which is not commutative!
-            auto distance = getRayLength(params_.relative_pose + ground_truth.kinematics->pose);
+        return output;
+    }
 
-            //add noise in distance (about 0.2m sigma)
-            distance += uncorrelated_noise_.next();
+private:
+    DistanceSimpleParams params_;
 
-            output.distance = distance;
-            output.min_distance = params_.min_distance;
-            output.max_distance = params_.max_distance;
-            output.relative_pose = params_.relative_pose;
-            output.time_stamp = clock()->nowNanos();
+    //GaussianMarkov correlated_noise_;
+    RandomGeneratorGausianR uncorrelated_noise_;
 
-            return output;
-        }
+    FrequencyLimiter freq_limiter_;
+    DelayLine<DistanceSensorData> delay_line_;
 
-    private:
-        DistanceSimpleParams params_;
+    //start time
+};
 
-        //GaussianMarkov correlated_noise_;
-        RandomGeneratorGausianR uncorrelated_noise_;
-
-        FrequencyLimiter freq_limiter_;
-        DelayLine<DistanceSensorData> delay_line_;
-
-        //start time
-    };
-}
-} //namespace
+}} //namespace
 #endif

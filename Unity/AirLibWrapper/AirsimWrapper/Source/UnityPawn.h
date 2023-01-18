@@ -3,7 +3,6 @@
 class UnityPawn
 {
 public:
-    UnityPawn()
-    {
-    }
+	UnityPawn()
+	{}
 };

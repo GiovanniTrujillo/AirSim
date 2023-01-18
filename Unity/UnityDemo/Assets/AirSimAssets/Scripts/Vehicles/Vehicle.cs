@@ -1,7 +1,6 @@
 ﻿using System;
 using AirSimUnity.DroneStructs;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
@@ -28,7 +27,7 @@ namespace AirSimUnity {
         protected bool isServerStarted = false;
         bool print_log_messages_ = true;
 
-        protected readonly List<DataCaptureScript> captureCameras = new List<DataCaptureScript>();
+        protected List<DataCaptureScript> captureCameras = new List<DataCaptureScript>();
 
         protected AutoResetEvent captureResetEvent;
 
@@ -42,32 +41,32 @@ namespace AirSimUnity {
         private static bool isSegmentationUpdated;
 
         private bool calculateRayCast = false;
-        private Vector3 startVec;
-        private Vector3 endVec;
-        private RaycastHit hitInfo;
-        private bool hitResult;
-
-        [SerializeField] string vehicleName;
-
-        private Rigidbody vehicleRigidBody;
-
-        private void Awake()
-        {
-            vehicleRigidBody = GetComponent(type: typeof(Rigidbody)) as Rigidbody;
-        }
+        Vector3 startVec;
+        Vector3 endVec;
+        RaycastHit hitInfo;
+        bool hitResult;
 
         //Ensure to call this method as the first statement, from derived class `Start()` method.
         protected void Start() {
             isDrone = this is Drone ? true : false;
             if (isDrone) {
-                vehicleRigidBody.useGravity = false;
+                GetComponent<Rigidbody>().useGravity = false;
             }
 
             InitializeVehicle();
 
-            airsimInterface = VehicleCompanion.GetVehicleCompanion(vehicleName, this);
-            isServerStarted = true;
-            AirSimGlobal.Instance.Weather.AttachToVehicle(this);
+            airsimInterface = VehicleCompanion.GetVehicleCompanion(this);
+            isServerStarted = airsimInterface.StartVehicleServer(AirSimSettings.GetSettings().LocalHostIP);
+
+            if (isServerStarted == false)
+            {
+#if UNITY_EDITOR
+                EditorUtility.DisplayDialog("Problem in starting AirSim server!!!", "Please check logs for more information.", "Exit");
+                EditorApplication.Exit(1);
+#else
+                Application.Quit();
+#endif
+            }
         }
 
         //Ensure to call this method as the first statement, from derived class `FixedUpdate()` method.
@@ -113,6 +112,8 @@ namespace AirSimUnity {
                 {
                     print_log_messages_ = !print_log_messages_;
                 }
+
+                airsimInterface.InvokeTickInAirSim(Time.deltaTime);
             }
         }
 
@@ -130,7 +131,7 @@ namespace AirSimUnity {
                 collisionInfo.object_name = collision.collider.name;
                 collisionInfo.time_stamp = DataManager.GetCurrentTimeInMilli();
 
-                airsimInterface.InvokeCollisionDetectionInAirSim(vehicleName, collisionInfo);
+                airsimInterface.InvokeCollisionDetectionInAirSim(collisionInfo);
             }
         }
 
@@ -157,6 +158,10 @@ namespace AirSimUnity {
             }
         }
 
+        protected void OnApplicationQuit() {
+            airsimInterface.StopVehicleServer();
+        }
+
         //Define the recording data that needs to be saved in the airsim_rec file for Toggle Recording button
         public abstract DataRecorder.ImageData GetRecordingData();
 
@@ -165,15 +170,14 @@ namespace AirSimUnity {
             resetVehicle = true;
         }
 
-        public virtual AirSimVector GetVelocity()
+        public AirSimVector GetVelocity()
         {
             var rigidBody = GetComponent<Rigidbody>();
-
             return new AirSimVector(rigidBody.velocity.x, rigidBody.velocity.y, rigidBody.velocity.z);
         }
 
         public bool SetPose(AirSimPose pose, bool ignore_collision) {
-            poseFromAirLib = pose; 
+            poseFromAirLib = pose;
             return true;
         }
 
@@ -220,10 +224,11 @@ namespace AirSimUnity {
 
         public DataCaptureScript GetCameraCapture(string cameraName) {
             DataCaptureScript recordCam = captureCameras[0];
-            foreach (DataCaptureScript camCapture in captureCameras.Where(camCapture => camCapture.GetCameraName() == cameraName))
-            {
-                recordCam = camCapture;
-                break;
+            foreach (DataCaptureScript camCapture in captureCameras) {
+                if (camCapture.GetCameraName() == cameraName) {
+                    recordCam = camCapture;
+                    break;
+                }
             }
             return recordCam;
         }
@@ -249,42 +254,33 @@ namespace AirSimUnity {
 
         public CameraInfo GetCameraInfo(string cameraName) {
             CameraInfo info = new CameraInfo();
-            foreach (DataCaptureScript capture in captureCameras.Where(camCapture => camCapture.GetCameraName() == cameraName)) {
-                info.fov = capture.GetFOV();
-                info.pose = capture.GetPose();
-                return info;
+            foreach (DataCaptureScript capture in captureCameras) {
+                if (capture.GetCameraName() == cameraName) {
+                    info.fov = capture.GetFOV();
+                    info.pose = capture.GetPose();
+                    return info;
+                }
             }
             return info;
         }
 
         public bool SetCameraPose(string cameraName, AirSimPose pose) {
-            foreach (DataCaptureScript capture in captureCameras.Where(camCapture => camCapture.GetCameraName() == cameraName)) {
-                capture.SetPose(pose);
-                return true;
+            foreach (DataCaptureScript capture in captureCameras) {
+                if (capture.GetCameraName() == cameraName) {
+                    capture.SetPose(pose);
+                    return true;
+                }
             }
             return false;
         }
 
-        public bool SetCameraFoV(string cameraName, float fov_degrees)
-        {
-            foreach (DataCaptureScript capture in captureCameras.Where(capture => capture.GetCameraName() == cameraName))
-            {
-                capture.SetFoV(fov_degrees);
-                return true;
+        public bool SetCameraFoV(string cameraName, float fov_degrees) {
+            foreach(DataCaptureScript capture in captureCameras) {
+                if (capture.GetCameraName() == cameraName) {
+                    capture.SetFoV(fov_degrees);
+                    return true;;
+                }
             }
-
-            return false;
-        }
-
-        public bool SetDistortionParam(string cameraName, string paramName, float value)
-        {
-            // not implemented
-            return false;
-        }
-
-        public bool GetDistortionParams(string cameraName)
-        {
-            // not implemented
             return false;
         }
 
@@ -293,17 +289,12 @@ namespace AirSimUnity {
             if (!print_log_messages_)
                 return true;
 
-            switch (severity)
-            {
-                case 1:
-                    Debug.LogWarning(message + " " + messageParams + " Vehicle=" + vehicleName);
-                    break;
-                case 2:
-                    Debug.LogError(message + " " + messageParams + " Vehicle=" + vehicleName);
-                    break;
-                default:
-                    Debug.Log(message + " " + messageParams + " Vehicle=" + vehicleName);
-                    break;
+            if (severity == 2) {
+                Debug.LogError(message + " " + messageParams + " Vehicle=" + vehicleName);
+            } else if (severity == 1) {
+                Debug.LogWarning(message + " " + messageParams + " Vehicle=" + vehicleName);
+            } else {
+                Debug.Log(message + " " + messageParams + " Vehicle=" + vehicleName);
             }
             return true;
         }

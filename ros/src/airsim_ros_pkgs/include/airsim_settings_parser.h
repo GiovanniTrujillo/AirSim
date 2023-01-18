@@ -16,19 +16,21 @@ STRICT_MODE_ON
 class AirSimSettingsParser
 {
 public:
-    using AirSimSettings = msr::airlib::AirSimSettings;
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+    typedef msr::airlib::AirSimSettings::VehicleSetting VehicleSetting;
 
 public:
-    AirSimSettingsParser(const std::string& host_ip);
+    AirSimSettingsParser();
+    ~AirSimSettingsParser() {};
 
     bool success();
 
 private:
     std::string getSimMode();
-    bool getSettingsText(std::string& settings_text) const;
+    bool readSettingsTextFromFile(std::string settingsFilepath, std::string& settingsText);
+    bool getSettingsText(std::string& settingsText);
     bool initializeSettings();
 
     bool success_;
-    std::string settings_text_;
-    std::string host_ip_;
+    std::string settingsText_;
 };

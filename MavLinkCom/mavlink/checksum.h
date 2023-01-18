@@ -1,6 +1,5 @@
 #pragma once
 
-// clang-format off
 #if defined(MAVLINK_USE_CXX_NAMESPACE)
 namespace mavlink {
 #elif defined(__cplusplus)
@@ -94,5 +93,3 @@ static inline void crc_accumulate_buffer(uint16_t *crcAccum, const char *pBuffer
 #if defined(MAVLINK_USE_CXX_NAMESPACE) || defined(__cplusplus)
 }
 #endif
-
-// clang-format on

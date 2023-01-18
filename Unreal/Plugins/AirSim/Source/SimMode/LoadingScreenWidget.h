@@ -7,8 +7,9 @@
 #include "Runtime/UMG/Public/Components/Image.h"
 #include "LoadingScreenWidget.generated.h"
 
+
 UCLASS()
 class AIRSIM_API ULoadingScreenWidget : public UUserWidget
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 };

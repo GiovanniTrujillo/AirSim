@@ -321,7 +321,7 @@
     <ClInclude Include="include\vehicles\multirotor\firmwares\simple_flight\AirSimSimpleFlightEstimator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vehicles\car\api\CarRpcLibAdaptors.hpp">
+    <ClInclude Include="include\vehicles\car\api\CarRpcLibAdapators.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vehicles\car\api\CarRpcLibClient.hpp">
@@ -330,7 +330,7 @@
     <ClInclude Include="include\vehicles\car\api\CarRpcLibServer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\vehicles\multirotor\api\MultirotorRpcLibAdaptors.hpp">
+    <ClInclude Include="include\vehicles\multirotor\api\MultirotorRpcLibAdapators.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vehicles\multirotor\api\MultirotorRpcLibClient.hpp">
@@ -339,7 +339,7 @@
     <ClInclude Include="include\vehicles\multirotor\api\MultirotorRpcLibServer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\api\RpcLibAdaptorsBase.hpp">
+    <ClInclude Include="include\api\RpcLibAdapatorsBase.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\vehicles\car\api\CarApiBase.hpp">
@@ -456,6 +456,39 @@
     <ClInclude Include="include\common\common_utils\SmoothingFilter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\firmwares\mavlink\MavLinkFixedWingApi.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\firmwares\mavlink\Px4FixedWingParams.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\api\FixedWingApiBase.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\api\FixedWingCommon.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\api\FixedWingRpcLibAdaptors.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\api\FixedWingRpcLibServer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\DynamicForces.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\DynamicParams.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\FixedWingParams.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehilces\fixedwing\FixedWingParamsFactory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\vehicles\fixedwing\FixedWingPhysicsBody.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\safety\ObstacleMap.cpp">
@@ -486,6 +519,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\vehicles\multirotor\api\MultirotorApiBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vehicles\fixedwing\api\FixedWingApiBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vehicles\fixedwing\api\FixedWingRpcLibClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vehicles\fixedwing\api\FixedWingRpcLibServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

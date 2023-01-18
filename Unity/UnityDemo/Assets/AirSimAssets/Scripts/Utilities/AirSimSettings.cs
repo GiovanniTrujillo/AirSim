@@ -149,8 +149,6 @@ namespace AirSimUnity {
         private static AirSimSettings settings = null;
 
         public static AirSimSettings GetSettings() {
-            if (settings == null)
-                Initialize();
             return settings;
         }
 

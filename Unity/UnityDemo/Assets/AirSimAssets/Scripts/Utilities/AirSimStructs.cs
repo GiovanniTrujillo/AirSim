@@ -457,7 +457,7 @@ namespace AirSimUnity {
 
     public enum ImageType {
         Scene = 0,
-        DepthPlanar,
+        DepthPlanner,
         DepthPerspective,
         DepthVis,
         DisparityNormalized,

@@ -9,8 +9,7 @@
 #include "NedTransform.h"
 #include "GameFramework/Actor.h"
 
-class UnrealSensorFactory : public msr::airlib::SensorFactory
-{
+class UnrealSensorFactory : public msr::airlib::SensorFactory {
 public:
     typedef msr::airlib::AirSimSettings AirSimSettings;
 
@@ -18,7 +17,7 @@ public:
     UnrealSensorFactory(AActor* actor, const NedTransform* ned_transform);
     virtual ~UnrealSensorFactory() {}
     void setActor(AActor* actor, const NedTransform* ned_transform);
-    virtual std::shared_ptr<msr::airlib::SensorBase> createSensorFromSettings(
+    virtual std::unique_ptr<msr::airlib::SensorBase> createSensorFromSettings(
         const AirSimSettings::SensorSetting* sensor_setting) const override;
 
 private:

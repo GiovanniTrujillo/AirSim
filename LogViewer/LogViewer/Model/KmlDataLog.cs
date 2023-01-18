@@ -159,23 +159,22 @@ namespace LogViewer.Model
             foreach (var item in items)
             {
                 // is this a new item we haven't seen before?
-                
-                if (!schema.HasChild(item.Name))
+                if (!(from c in schema.ChildItems where c.Name == item.Name select c).Any())
                 {
                     var typeName = item.Name;
                     if (item is LogEntry)
                     {
                         // recurrse down the structure
-                        var s = new LogItemSchema() { Name = item.Name, Type = typeName };
-                        schema.AddChild(s);
+                        var s = new LogItemSchema() { Name = item.Name, Type = typeName, ChildItems = new List<Model.LogItemSchema>(), Parent = schema };
+                        schema.ChildItems.Add(s);
                         Schematize(s, ((LogEntry)item).GetFields());
                     }
                     else
                     {
                         // leaf node
                         typeName = item.Value.GetType().Name;
-                        var leaf = new LogItemSchema() { Name = item.Name, Type = typeName };
-                        schema.AddChild(leaf);
+                        var leaf = new LogItemSchema() { Name = item.Name, Type = typeName, Parent = schema };
+                        schema.ChildItems.Add(leaf);
                     }
                 }
             }
@@ -186,7 +185,7 @@ namespace LogViewer.Model
             get {
                 if (this.schema == null)
                 {
-                    this.schema = new LogItemSchema() { Name = "KmlLog", Type = "Root" };
+                    this.schema = new LogItemSchema() { Name = "KmlLog", Type = "Root", ChildItems = new List<Model.LogItemSchema>() };
                     Schematize(this.schema, this.log);
                 }
                 return this.schema;

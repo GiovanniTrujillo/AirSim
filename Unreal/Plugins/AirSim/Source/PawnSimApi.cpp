@@ -3,7 +3,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
-#include "Components/LineBatchComponent.h"
 
 #include "AirBlueprintLib.h"
 #include "common/ClockFactory.hpp"
@@ -11,7 +10,6 @@
 #include "NedTransform.h"
 #include "common/EarthUtils.hpp"
 
-#include "Materials/MaterialParameterCollectionInstance.h"
 #include "DrawDebugHelpers.h"
 
 PawnSimApi::PawnSimApi(const Params& params)
@@ -21,8 +19,7 @@ PawnSimApi::PawnSimApi(const Params& params)
 
 void PawnSimApi::initialize()
 {
-    Kinematics::State initial_kinematic_state = Kinematics::State::zero();
-
+    Kinematics::State initial_kinematic_state = Kinematics::State::zero();;
     initial_kinematic_state.pose = getPose();
     kinematics_.reset(new Kinematics(initial_kinematic_state));
 
@@ -67,8 +64,8 @@ void PawnSimApi::setStartPosition(const FVector& position, const FRotator& rotat
 
     //compute our home point
     Vector3r nedWrtOrigin = ned_transform_.toGlobalNed(initial_state_.start_location);
-    home_geo_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin,
-                                                             AirSimSettings::singleton().origin_geopoint);
+    home_geo_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin, 
+        AirSimSettings::singleton().origin_geopoint);
 }
 
 void PawnSimApi::pawnTick(float dt)
@@ -89,11 +86,11 @@ void PawnSimApi::detectUsbRc()
         rc_data_.is_initialized = joystick_state_.is_initialized;
 
         if (rc_data_.is_initialized)
-            UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid == "" ? "(Detected)" : joystick_state_.pid_vid, LogDebugLevel::Informational);
+            UAirBlueprintLib::LogMessageString("RC Controller on USB: ", joystick_state_.pid_vid == "" ?
+                "(Detected)" : joystick_state_.pid_vid, LogDebugLevel::Informational);
         else
             UAirBlueprintLib::LogMessageString("RC Controller on USB not detected: ",
-                                               std::to_string(joystick_state_.connection_error_code),
-                                               LogDebugLevel::Informational);
+                std::to_string(joystick_state_.connection_error_code), LogDebugLevel::Informational);
     }
 }
 
@@ -108,6 +105,7 @@ void PawnSimApi::setupCamerasFromSettings(const common_utils::UniqueValueMap<std
     createCamerasFromSettings();
 
     //setup individual cameras
+    typedef msr::airlib::AirSimSettings AirSimSettings;
     const auto& camera_defaults = AirSimSettings::singleton().camera_defaults;
     for (auto& pair : cameras_.getMap()) {
         const auto& camera_setting = Utils::findOrDefault(getVehicleSetting()->cameras, pair.first, camera_defaults);
@@ -129,10 +127,11 @@ void PawnSimApi::createCamerasFromSettings()
         const auto& setting = camera_setting_pair.second;
 
         //get pose
-        FVector position = transform.fromLocalNed(setting.position) - transform.fromLocalNed(Vector3r::Zero());
+        FVector position = transform.fromLocalNed(
+            NedTransform::Vector3r(setting.position.x(), setting.position.y(), setting.position.z()))
+            - transform.fromLocalNed(NedTransform::Vector3r(0.0, 0.0, 0.0));
         FTransform camera_transform(FRotator(setting.rotation.pitch, setting.rotation.yaw, setting.rotation.roll),
-                                    position,
-                                    FVector(1., 1., 1.));
+            position, FVector(1., 1., 1.));
 
         //spawn and attach camera to pawn
         APIPCamera* camera = params_.pawn->GetWorld()->SpawnActor<APIPCamera>(params_.pip_camera_class, camera_transform, camera_spawn_params);
@@ -143,8 +142,8 @@ void PawnSimApi::createCamerasFromSettings()
     }
 }
 
-void PawnSimApi::onCollision(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp,
-                             bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
+void PawnSimApi::onCollision(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, 
+    bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit)
 {
     // Deflect along the surface when we collide.
     //FRotator CurrentRotation = GetActorRotation(RootComponent);
@@ -153,7 +152,7 @@ void PawnSimApi::onCollision(class UPrimitiveComponent* MyComp, class AActor* Ot
     UPrimitiveComponent* comp = Cast<class UPrimitiveComponent>(Other ? (Other->GetRootComponent() ? Other->GetRootComponent() : nullptr) : nullptr);
 
     state_.collision_info.has_collided = true;
-    state_.collision_info.normal = Vector3r(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, -Hit.ImpactNormal.Z);
+    state_.collision_info.normal = Vector3r(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, - Hit.ImpactNormal.Z);
     state_.collision_info.impact_point = ned_transform_.toLocalNed(Hit.ImpactPoint);
     state_.collision_info.position = ned_transform_.toLocalNed(getUUPosition());
     state_.collision_info.penetration_depth = ned_transform_.toNed(Hit.PenetrationDepth);
@@ -163,7 +162,11 @@ void PawnSimApi::onCollision(class UPrimitiveComponent* MyComp, class AActor* Ot
 
     ++state_.collision_info.collision_count;
 
-    UAirBlueprintLib::LogMessageString("Collision", Utils::stringf("#%d with %s - ObjID %d", state_.collision_info.collision_count, state_.collision_info.object_name.c_str(), state_.collision_info.object_id), LogDebugLevel::Informational);
+
+    UAirBlueprintLib::LogMessageString("Collision", Utils::stringf("#%d with %s - ObjID %d", 
+        state_.collision_info.collision_count, 
+        state_.collision_info.object_name.c_str(), state_.collision_info.object_id),
+        LogDebugLevel::Informational);
 }
 
 void PawnSimApi::possess()
@@ -181,6 +184,27 @@ const NedTransform& PawnSimApi::getNedTransform() const
 APawn* PawnSimApi::getPawn()
 {
     return params_.pawn;
+}
+
+std::vector<PawnSimApi::ImageCaptureBase::ImageResponse> PawnSimApi::getImages(
+    const std::vector<ImageCaptureBase::ImageRequest>& requests) const
+{
+    std::vector<ImageCaptureBase::ImageResponse> responses;
+
+    const ImageCaptureBase* camera = getImageCapture();
+    camera->getImages(requests, responses);
+
+    return responses;
+}
+
+std::vector<uint8_t> PawnSimApi::getImage(const std::string& camera_name, ImageCaptureBase::ImageType image_type) const
+{
+    std::vector<ImageCaptureBase::ImageRequest> request = { ImageCaptureBase::ImageRequest(camera_name, image_type) };
+    const std::vector<ImageCaptureBase::ImageResponse>& response = getImages(request);
+    if (response.size() > 0)
+        return response.at(0).image_data_uint8;
+    else
+        return std::vector<uint8_t>();
 }
 
 void PawnSimApi::setRCForceFeedback(float rumble_strength, float auto_center)
@@ -214,10 +238,12 @@ msr::airlib::RCData PawnSimApi::getRCData() const
         rc_data_.switches = joystick_state_.buttons;
         rc_data_.vendor_id = joystick_state_.pid_vid.substr(0, joystick_state_.pid_vid.find('&'));
 
+        
         //switch index 0 to 7 for FrSky Taranis RC is:
         //front-upper-left, front-upper-right, top-right-left, top-right-left, top-left-right, top-right-right, top-left-left, top-right-left
 
-        UAirBlueprintLib::LogMessageString("Joystick (T,R,P,Y,Buttons): ", Utils::stringf("%f, %f, %f %f, %s", rc_data_.throttle, rc_data_.roll, rc_data_.pitch, rc_data_.yaw, Utils::toBinaryString(joystick_state_.buttons).c_str()), LogDebugLevel::Informational);
+        UAirBlueprintLib::LogMessageString("Joystick (T,R,P,Y,Buttons): ", Utils::stringf("%f, %f, %f %f, %s",
+            rc_data_.throttle, rc_data_.roll, rc_data_.pitch, rc_data_.yaw, Utils::toBinaryString(joystick_state_.buttons).c_str()), LogDebugLevel::Informational);
 
         //TODO: should below be at controller level info?
         UAirBlueprintLib::LogMessageString("RC Mode: ", rc_data_.getSwitch(0) == 0 ? "Angle" : "Rate", LogDebugLevel::Informational);
@@ -230,10 +256,8 @@ msr::airlib::RCData PawnSimApi::getRCData() const
 void PawnSimApi::displayCollisionEffect(FVector hit_location, const FHitResult& hit)
 {
     if (params_.collision_display_template != nullptr && Utils::isDefinitelyLessThan(hit.ImpactNormal.Z, 0.0f)) {
-        UParticleSystemComponent* particles = UGameplayStatics::SpawnEmitterAtLocation(params_.pawn->GetWorld(),
-                                                                                       params_.collision_display_template,
-                                                                                       FTransform(hit_location),
-                                                                                       true);
+        UParticleSystemComponent* particles = UGameplayStatics::SpawnEmitterAtLocation(params_.pawn->GetWorld(), 
+            params_.collision_display_template, FTransform(hit_location), true);
         particles->SetWorldScale3D(FVector(0.1f, 0.1f, 0.1f));
     }
 }
@@ -262,49 +286,6 @@ const UnrealImageCapture* PawnSimApi::getImageCapture() const
 int PawnSimApi::getCameraCount()
 {
     return cameras_.valsSize();
-}
-
-bool PawnSimApi::testLineOfSightToPoint(const msr::airlib::GeoPoint& lla) const
-{
-    bool hit;
-
-    // We need to run this code on the main game thread, since it iterates over actors
-    UAirBlueprintLib::RunCommandOnGameThread([this, lla, &hit]() {
-        // This default NedTransform is part of how we anchor the AirSim primary LLA origin at 0, 0, 0 in Unreal
-        NedTransform zero_based_ned_transform(FTransform::Identity, UAirBlueprintLib::GetWorldToMetersScale(params_.pawn));
-        FCollisionQueryParams collision_params(SCENE_QUERY_STAT(LineOfSight), true, params_.pawn);
-
-        // Transform from LLA to NED
-        const auto& settings = AirSimSettings::singleton();
-        msr::airlib::GeodeticConverter converter(settings.origin_geopoint.home_geo_point.latitude,
-                                                 settings.origin_geopoint.home_geo_point.longitude,
-                                                 settings.origin_geopoint.home_geo_point.altitude);
-        double north, east, down;
-        converter.geodetic2Ned(lla.latitude, lla.longitude, lla.altitude, &north, &east, &down);
-        msr::airlib::Vector3r ned(north, east, down);
-        FVector target_location = zero_based_ned_transform.fromGlobalNed(ned);
-
-        hit = params_.pawn->GetWorld()->LineTraceTestByChannel(params_.pawn->GetActorLocation(), target_location, ECC_Visibility, collision_params);
-
-        // KM911 remove logging
-        //		common_utils::Utils::log("NED from LLA: " + std::to_string(target_location.X) + ", " + std::to_string(target_location.Y) + ", " + std::to_string(target_location.Z), common_utils::Utils::kLogLevelInfo);
-
-        if (AirSimSettings::singleton().show_los_debug_lines_) {
-            if (hit) {
-                // No LOS, so draw red line
-                FLinearColor color{ 1.0f, 0, 0, 0.4f };
-                params_.pawn->GetWorld()->LineBatcher->DrawLine(params_.pawn->GetActorLocation(), target_location, color, SDPG_World, 10, -1);
-            }
-            else {
-                // Yes LOS, so draw green line
-                FLinearColor color{ 0, 1.0f, 0, 0.4f };
-                params_.pawn->GetWorld()->LineBatcher->DrawLine(params_.pawn->GetActorLocation(), target_location, color, SDPG_World, 10, -1);
-            }
-        }
-    },
-                                             true);
-
-    return !hit;
 }
 
 void PawnSimApi::resetImplementation()
@@ -338,32 +319,26 @@ void PawnSimApi::reportState(msr::airlib::StateReporter& reporter)
 
 //void playBack()
 //{
-//if (params_.pawn->GetRootPrimitiveComponent()->IsAnySimulatingPhysics()) {
-//    params_.pawn->GetRootPrimitiveComponent()->SetSimulatePhysics(false);
-//    params_.pawn->GetRootPrimitiveComponent()->SetSimulatePhysics(true);
-//}
-//TODO: refactor below code used for playback
-//std::ifstream sim_log("C:\\temp\\mavlogs\\circle\\sim_cmd_006_orbit 5 1.txt.pos.txt");
-//plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
-//std::ifstream real_log("C:\\temp\\mavlogs\\circle\\real_cmd_006_orbit 5 1.txt.pos.txt");
-//plot(real_log, FColor::Yellow, Vector3r(0, 0, -3));
+    //if (params_.pawn->GetRootPrimitiveComponent()->IsAnySimulatingPhysics()) {
+    //    params_.pawn->GetRootPrimitiveComponent()->SetSimulatePhysics(false);
+    //    params_.pawn->GetRootPrimitiveComponent()->SetSimulatePhysics(true);
+    //}
+    //TODO: refactor below code used for playback
+    //std::ifstream sim_log("C:\\temp\\mavlogs\\circle\\sim_cmd_006_orbit 5 1.txt.pos.txt");
+    //plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
+    //std::ifstream real_log("C:\\temp\\mavlogs\\circle\\real_cmd_006_orbit 5 1.txt.pos.txt");
+    //plot(real_log, FColor::Yellow, Vector3r(0, 0, -3));
 
-//std::ifstream sim_log("C:\\temp\\mavlogs\\square\\sim_cmd_005_square 5 1.txt.pos.txt");
-//plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
-//std::ifstream real_log("C:\\temp\\mavlogs\\square\\real_cmd_012_square 5 1.txt.pos.txt");
-//plot(real_log, FColor::Yellow, Vector3r(0, 0, -3));
+    //std::ifstream sim_log("C:\\temp\\mavlogs\\square\\sim_cmd_005_square 5 1.txt.pos.txt");
+    //plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
+    //std::ifstream real_log("C:\\temp\\mavlogs\\square\\real_cmd_012_square 5 1.txt.pos.txt");
+    //plot(real_log, FColor::Yellow, Vector3r(0, 0, -3));
 //}
+
 
 PawnSimApi::CollisionInfo PawnSimApi::getCollisionInfo() const
 {
     return state_.collision_info;
-}
-
-PawnSimApi::CollisionInfo PawnSimApi::getCollisionInfoAndReset()
-{
-    CollisionInfo collision_info = getCollisionInfo();
-    state_.collision_info.has_collided = false;
-    return collision_info;
 }
 
 FVector PawnSimApi::getUUPosition() const
@@ -382,15 +357,14 @@ void PawnSimApi::toggleTrace()
 
     if (!state_.tracing_enabled)
         UKismetSystemLibrary::FlushPersistentDebugLines(params_.pawn->GetWorld());
-    else {
+    else {     
         state_.debug_position_offset = state_.current_debug_position - state_.current_position;
         state_.last_debug_position = state_.last_position;
     }
 }
 
-void PawnSimApi::setTraceLine(const std::vector<float>& color_rgba, float thickness)
-{
-    FLinearColor color{ color_rgba[0], color_rgba[1], color_rgba[2], color_rgba[3] };
+void PawnSimApi::setTraceLine(const std::vector<float>& color_rgba, float thickness) {
+    FLinearColor color {color_rgba[0], color_rgba[1], color_rgba[2], color_rgba[3]};
     trace_color_ = color.ToFColor(true);
     trace_thickness_ = thickness;
 }
@@ -400,6 +374,7 @@ void PawnSimApi::allowPassthroughToggleInput()
     state_.passthrough_enabled = !state_.passthrough_enabled;
     UAirBlueprintLib::LogMessage("enable_passthrough_on_collisions: ", FString::FromInt(state_.passthrough_enabled), LogDebugLevel::Informational);
 }
+
 
 void PawnSimApi::plot(std::istream& s, FColor color, const Vector3r& offset)
 {
@@ -419,6 +394,36 @@ void PawnSimApi::plot(std::istream& s, FColor color, const Vector3r& offset)
         }
         last_point = current_point;
     }
+
+}
+
+msr::airlib::CameraInfo PawnSimApi::getCameraInfo(const std::string& camera_name) const
+{
+    msr::airlib::CameraInfo camera_info;
+
+    const APIPCamera* camera = getCamera(camera_name);
+    camera_info.pose.position = ned_transform_.toLocalNed(camera->GetActorLocation());
+    camera_info.pose.orientation = ned_transform_.toNed(camera->GetActorRotation().Quaternion());
+    camera_info.fov = camera->GetCameraComponent()->FieldOfView;
+    camera_info.proj_mat = camera->getProjectionMatrix(APIPCamera::ImageType::Scene);
+    return camera_info;
+}
+
+void PawnSimApi::setCameraPose(const std::string& camera_name, const msr::airlib::Pose& pose)
+{
+    UAirBlueprintLib::RunCommandOnGameThread([this, camera_name, pose]() {
+        APIPCamera* camera = getCamera(camera_name);
+        FTransform pose_unreal = ned_transform_.fromRelativeNed(pose);
+        camera->setCameraPose(pose_unreal);
+    }, true);
+}
+
+void PawnSimApi::setCameraFoV(const std::string& camera_name, float fov_degrees)
+{
+    UAirBlueprintLib::RunCommandOnGameThread([this, camera_name, fov_degrees]() {
+        APIPCamera* camera = getCamera(camera_name);
+        camera->setCameraFoV(fov_degrees);
+    }, true);
 }
 
 //parameters in NED frame
@@ -438,8 +443,7 @@ void PawnSimApi::setPose(const Pose& pose, bool ignore_collision)
 {
     UAirBlueprintLib::RunCommandOnGameThread([this, pose, ignore_collision]() {
         setPoseInternal(pose, ignore_collision);
-    },
-                                             true);
+    }, true);
 }
 
 void PawnSimApi::setPoseInternal(const Pose& pose, bool ignore_collision)
@@ -453,6 +457,10 @@ void PawnSimApi::setPoseInternal(const Pose& pose, bool ignore_collision)
 
     bool enable_teleport = ignore_collision || canTeleportWhileMove();
 
+    //must reset collision before we set pose. Setting pose will immediately call NotifyHit if there was collision
+    //if there was no collision than has_collided would remain false, else it will be set so its value can be
+    //checked at the start of next tick
+    state_.collision_info.has_collided = false;
     state_.was_last_move_teleport = enable_teleport;
 
     if (enable_teleport)
@@ -485,7 +493,7 @@ void PawnSimApi::setDebugPose(const Pose& debug_pose)
     }
 }
 
-bool PawnSimApi::canTeleportWhileMove() const
+bool PawnSimApi::canTeleportWhileMove()  const
 {
     //allow teleportation
     //  if collisions are not enabled
@@ -528,14 +536,7 @@ void PawnSimApi::updateRendering(float dt)
 
 const msr::airlib::Kinematics::State* PawnSimApi::getGroundTruthKinematics() const
 {
-    return &kinematics_->getState();
-}
-
-void PawnSimApi::setKinematics(const Kinematics::State& state, bool ignore_collision)
-{
-    unused(ignore_collision);
-
-    return kinematics_->setState(state);
+    return & kinematics_->getState();
 }
 const msr::airlib::Environment* PawnSimApi::getGroundTruthEnvironment() const
 {
@@ -553,20 +554,34 @@ msr::airlib::Environment* PawnSimApi::getEnvironment()
 std::string PawnSimApi::getRecordFileLine(bool is_header_line) const
 {
     if (is_header_line) {
-        return "VehicleName\tTimeStamp\tPOS_X\tPOS_Y\tPOS_Z\tQ_W\tQ_X\tQ_Y\tQ_Z\t";
+        return "TimeStamp\tPOS_X\tPOS_Y\tPOS_Z\tQ_W\tQ_X\tQ_Y\tQ_Z\t";
     }
 
-    const auto* kinematics = getGroundTruthKinematics();
-    const uint64_t timestamp_millis = static_cast<uint64_t>(clock()->nowNanos() / 1.0E6);
+    const Kinematics::State* kinematics = getGroundTruthKinematics();
+    uint64_t timestamp_millis = static_cast<uint64_t>(msr::airlib::ClockFactory::get()->nowNanos() / 1.0E6);
 
-    std::ostringstream ss;
-    ss << getVehicleName() << "\t";
-    ss << timestamp_millis << "\t";
-    ss << kinematics->pose.position.x() << "\t" << kinematics->pose.position.y() << "\t" << kinematics->pose.position.z() << "\t";
-    ss << kinematics->pose.orientation.w() << "\t" << kinematics->pose.orientation.x() << "\t"
-       << kinematics->pose.orientation.y() << "\t" << kinematics->pose.orientation.z() << "\t";
+    //TODO: because this bug we are using alternative code with stringstream
+    //https://answers.unrealengine.com/questions/664905/unreal-crashes-on-two-lines-of-extremely-simple-st.html
 
-    return ss.str();
+    std::string line;
+    line.append(std::to_string(timestamp_millis)).append("\t")
+        .append(std::to_string(kinematics->pose.position.x())).append("\t")
+        .append(std::to_string(kinematics->pose.position.y())).append("\t")
+        .append(std::to_string(kinematics->pose.position.z())).append("\t")
+        .append(std::to_string(kinematics->pose.orientation.w())).append("\t")
+        .append(std::to_string(kinematics->pose.orientation.x())).append("\t")
+        .append(std::to_string(kinematics->pose.orientation.y())).append("\t")
+        .append(std::to_string(kinematics->pose.orientation.z())).append("\t")
+        ;
+
+    return line;
+
+    //std::stringstream ss;
+    //ss << timestamp_millis << "\t";
+    //ss << kinematics.pose.position.x() << "\t" << kinematics.pose.position.y() << "\t" << kinematics.pose.position.z() << "\t";
+    //ss << kinematics.pose.orientation.w() << "\t" << kinematics.pose.orientation.x() << "\t" << kinematics.pose.orientation.y() << "\t" << kinematics.pose.orientation.z() << "\t";
+    //ss << "\n";
+    //return ss.str();
 }
 
 msr::airlib::VehicleApiBase* PawnSimApi::getVehicleApiBase() const

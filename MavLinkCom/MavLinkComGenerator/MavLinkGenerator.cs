@@ -82,25 +82,21 @@ namespace MavLinkComGenerator
                 foreach (var p in cmd.parameters)
                 {
                     string fieldName = p.label;
-                    if (!p.reserved)
+                    if (string.IsNullOrWhiteSpace(fieldName))
                     {
-                        if (string.IsNullOrWhiteSpace(fieldName) && !string.IsNullOrWhiteSpace(p.description))
+                        fieldName = NameFromDescription(p.description);
+                    }
+                    else
+                    {
+                        fieldName = LegalizeIdentifier(fieldName);
+                    }
+                    if (fieldName != "Empty" && fieldName != "Reserved")
+                    {
+                        if (!string.IsNullOrWhiteSpace(p.description))
                         {
-                            fieldName = NameFromDescription(p.description);
+                            WriteComment("    ", p.description);
                         }
-                        else
-                        {
-                            fieldName = LegalizeIdentifier(fieldName);
-                        }
-
-                        if (fieldName != "Empty" && fieldName != "Reserved")
-                        {
-                            if (!string.IsNullOrWhiteSpace(p.description))
-                            {
-                                WriteComment("    ", p.description);
-                            }
-                            header.WriteLine("    float {0} = 0;", unique.Add(fieldName));
-                        }
+                        header.WriteLine("    float {0} = 0;", unique.Add(fieldName));
                     }
                 }
 
@@ -113,21 +109,18 @@ namespace MavLinkComGenerator
                 foreach (var p in cmd.parameters)
                 {
                     i++;
-                    if (!p.reserved)
+                    string fieldName = p.label;
+                    if (string.IsNullOrWhiteSpace(fieldName))
                     {
-                        string fieldName = p.label;
-                        if (string.IsNullOrWhiteSpace(fieldName) && !string.IsNullOrWhiteSpace(p.description))
-                        {
-                            fieldName = NameFromDescription(p.description);
-                        }
-                        else
-                        {
-                            fieldName = LegalizeIdentifier(fieldName);
-                        }
-                        if (fieldName != "Empty" && fieldName != "Reserved")
-                        {
-                            impl.WriteLine("    param{0} = {1};", i, unique.Add(fieldName));
-                        }
+                        fieldName = NameFromDescription(p.description);
+                    }
+                    else
+                    {
+                        fieldName = LegalizeIdentifier(fieldName);
+                    }
+                    if (fieldName != "Empty" && fieldName != "Reserved")
+                    {
+                        impl.WriteLine("    param{0} = {1};", i, unique.Add(fieldName));
                     }
                 }
                 impl.WriteLine("}");
@@ -140,21 +133,18 @@ namespace MavLinkComGenerator
                 foreach (var p in cmd.parameters)
                 {
                     i++;
-                    if (!p.reserved)
+                    string fieldName = p.label;
+                    if (string.IsNullOrWhiteSpace(fieldName))
                     {
-                        string fieldName = p.label;
-                        if (string.IsNullOrWhiteSpace(fieldName) && !string.IsNullOrWhiteSpace(p.description))
-                        {
-                            fieldName = NameFromDescription(p.description);
-                        }
-                        else
-                        {
-                            fieldName = LegalizeIdentifier(fieldName);
-                        }
-                        if (fieldName != "Empty" && fieldName != "Reserved")
-                        {
-                            impl.WriteLine("    {1} = param{0};", i, unique.Add(fieldName));
-                        }
+                        fieldName = NameFromDescription(p.description);
+                    }
+                    else
+                    {
+                        fieldName = LegalizeIdentifier(fieldName);
+                    }
+                    if (fieldName != "Empty" && fieldName != "Reserved")
+                    {
+                        impl.WriteLine("    {1} = param{0};", i, unique.Add(fieldName));
                     }
                 }
                 impl.WriteLine("}");

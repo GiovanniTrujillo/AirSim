@@ -60,7 +60,7 @@ namespace AirSimUnity {
 
         //Sets up the cameras based on the settings.json file to render on the sub windows.
         //Make sure the cameras are child of object with tag "ViewCameras"
-        private void SetUpViewCameras() {
+        public void SetUpViewCameras() {
             GameObject viewCameras = GameObject.FindGameObjectWithTag("ViewCameras");
 
             cameraViews[0] = transform.GetChild(0).gameObject;

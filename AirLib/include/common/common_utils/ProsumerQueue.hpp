@@ -10,8 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 
-namespace common_utils
-{
+namespace common_utils {
 
 /*
     This queue can support multiple producers consumers, but it should be used carefully 
@@ -40,10 +39,11 @@ public:
         is_done_ = false;
     }
 
-    T pop()
+    T pop() 
     {
         std::unique_lock<std::mutex> global_lock(mutex_);
-        while (queue_.empty()) {
+        while (queue_.empty())
+        {
             //this may be spurious wake-up
             //in multi-consumer scenario
             cond_.wait(global_lock);
@@ -56,7 +56,7 @@ public:
     bool tryPop(T& item)
     {
         std::unique_lock<std::mutex> global_lock(mutex_);
-        if (queue_.empty())
+        if(queue_.empty())
             return false;
 
         item = queue_.front();
@@ -89,7 +89,7 @@ public:
         global_lock.unlock();
         cond_.notify_one();
     }
-
+    
     //is_done_ flag is just convinience flag for external use
     //its not used by this class
     bool getIsDone()
@@ -101,9 +101,10 @@ public:
         is_done_ = val;
     }
 
+
     // non-copiable
-    ProsumerQueue(const ProsumerQueue&) = delete;
-    ProsumerQueue& operator=(const ProsumerQueue&) = delete;
+    ProsumerQueue(const ProsumerQueue&) = delete;            
+    ProsumerQueue& operator=(const ProsumerQueue&) = delete; 
 
 private:
     std::queue<T> queue_;
@@ -111,5 +112,6 @@ private:
     std::condition_variable cond_;
     std::atomic<bool> is_done_;
 };
+
 }
 #endif

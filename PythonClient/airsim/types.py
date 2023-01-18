@@ -1,7 +1,6 @@
 from __future__ import print_function
 import msgpackrpc #install as admin: pip install msgpack-rpc-python
 import numpy as np #pip install numpy
-import math
 
 class MsgpackMixin:
     def __repr__(self):
@@ -19,45 +18,16 @@ class MsgpackMixin:
         #return cls(**msgpack.unpack(encoded))
         return obj
 
-class _ImageType(type):
-    @property
-    def Scene(cls):
-        return 0
-    def DepthPlanar(cls):
-        return 1
-    def DepthPerspective(cls):
-        return 2
-    def DepthVis(cls):
-        return 3
-    def DisparityNormalized(cls):
-        return 4
-    def Segmentation(cls):
-        return 5
-    def SurfaceNormals(cls):
-        return 6
-    def Infrared(cls):
-        return 7
-    def OpticalFlow(cls):
-        return 8
-    def OpticalFlowVis(cls):
-        return 9
 
-    def __getattr__(self, key):
-        if key == 'DepthPlanner':
-            print('\033[31m'+"DepthPlanner has been (correctly) renamed to DepthPlanar. Please use ImageType.DepthPlanar instead."+'\033[0m')
-            raise AttributeError
-
-class ImageType(metaclass=_ImageType):
+class ImageType:
     Scene = 0
-    DepthPlanar = 1
+    DepthPlanner = 1
     DepthPerspective = 2
     DepthVis = 3
     DisparityNormalized = 4
     Segmentation = 5
     SurfaceNormals = 6
     Infrared = 7
-    OpticalFlow = 8
-    OpticalFlowVis = 9
 
 class DrivetrainType:
     MaxDegreeOfFreedom = 0
@@ -78,14 +48,6 @@ class WeatherParameter:
     Fog = 7
     Enabled = 8
 
-class Vector2r(MsgpackMixin):
-    x_val = 0.0
-    y_val = 0.0
-
-    def __init__(self, x_val = 0.0, y_val = 0.0):
-        self.x_val = x_val
-        self.y_val = y_val
-
 class Vector3r(MsgpackMixin):
     x_val = 0.0
     y_val = 0.0
@@ -99,9 +61,6 @@ class Vector3r(MsgpackMixin):
     @staticmethod
     def nanVector3r():
         return Vector3r(np.nan, np.nan, np.nan)
-
-    def containsNan(self):
-        return (math.isnan(self.x_val) or math.isnan(self.y_val) or math.isnan(self.z_val))
 
     def __add__(self, other):
         return Vector3r(self.x_val + other.x_val, self.y_val + other.y_val, self.z_val + other.z_val)
@@ -146,8 +105,6 @@ class Vector3r(MsgpackMixin):
     def to_numpy_array(self):
         return np.array([self.x_val, self.y_val, self.z_val], dtype=np.float32)
 
-    def __iter__(self):
-        return iter((self.x_val, self.y_val, self.z_val))
 
 class Quaternionr(MsgpackMixin):
     w_val = 0.0
@@ -164,9 +121,6 @@ class Quaternionr(MsgpackMixin):
     @staticmethod
     def nanQuaternionr():
         return Quaternionr(np.nan, np.nan, np.nan, np.nan)
-
-    def containsNan(self):
-        return (math.isnan(self.w_val) or math.isnan(self.x_val) or math.isnan(self.y_val) or math.isnan(self.z_val))
 
     def __add__(self, other):
         if type(self) == type(other):
@@ -238,16 +192,14 @@ class Quaternionr(MsgpackMixin):
     def to_numpy_array(self):
         return np.array([self.x_val, self.y_val, self.z_val, self.w_val], dtype=np.float32)
 
-    def __iter__(self):
-        return iter((self.x_val, self.y_val, self.z_val, self.w_val))
 
 class Pose(MsgpackMixin):
     position = Vector3r()
     orientation = Quaternionr()
 
     def __init__(self, position_val = None, orientation_val = None):
-        position_val = position_val if position_val is not None else Vector3r()
-        orientation_val = orientation_val if orientation_val is not None else Quaternionr()
+        position_val = position_val if position_val != None else Vector3r()
+        orientation_val = orientation_val if orientation_val != None else Quaternionr()
         self.position = position_val
         self.orientation = orientation_val
 
@@ -255,11 +207,6 @@ class Pose(MsgpackMixin):
     def nanPose():
         return Pose(Vector3r.nanVector3r(), Quaternionr.nanQuaternionr())
 
-    def containsNan(self):
-        return (self.position.containsNan() or self.orientation.containsNan())
-
-    def __iter__(self):
-        return iter((self.position, self.orientation))
 
 class CollisionInfo(MsgpackMixin):
     has_collided = False
@@ -402,9 +349,16 @@ class MultirotorState(MsgpackMixin):
     ready_message = ""
     can_arm = False
 
-class RotorStates(MsgpackMixin):
+class FixedWingState(MsgpackMixin):
+    collision = CollisionInfo()
+    kinematics_estimated = KinematicsState()
+    gps_location = GeoPoint()
     timestamp = np.uint64(0)
-    rotors = []
+    landed_state = LandedState.Landed
+    rc_data = RCData()
+    ready = False
+    ready_message = ""
+    can_arm = False
 
 class ProjectionMatrix(MsgpackMixin):
     matrix = []
@@ -418,7 +372,6 @@ class LidarData(MsgpackMixin):
     point_cloud = 0.0
     time_stamp = np.uint64(0)
     pose = Pose()
-    segmentation = 0
 
 class ImuData(MsgpackMixin):
     time_stamp = np.uint64(0)
@@ -463,21 +416,6 @@ class DistanceSensorData(MsgpackMixin):
     max_distance = 0.0
     relative_pose = Pose()
 
-class Box2D(MsgpackMixin):
-    min = Vector2r()
-    max = Vector2r()
-
-class Box3D(MsgpackMixin):
-    min = Vector3r()
-    max = Vector3r()
-
-class DetectionInfo(MsgpackMixin):
-    name = ''
-    geo_point = GeoPoint()
-    box2D = Box2D()
-    box3D = Box3D()
-    relative_pose = Pose()
-    
 class PIDGains():
     """
     Struct to store values of PID gains. Used to transmit controller gain values while instantiating

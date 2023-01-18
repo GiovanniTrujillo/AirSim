@@ -7,13 +7,12 @@
 #include "StdPidIntegrator.hpp"
 #include "RungKuttaPidIntegrator.hpp"
 
-namespace simple_flight
-{
+namespace simple_flight {
 
-template <class T>
-class PidController : public IUpdatable
-{
+template<class T>
+class PidController : public IUpdatable {
 public:
+
     PidController(const IBoardClock* clock = nullptr, const PidConfig<T>& config = PidConfig<T>())
         : clock_(clock), config_(config)
     {
@@ -27,6 +26,7 @@ public:
         default:
             throw std::invalid_argument("PID integrator type is not recognized");
         }
+        
     }
 
     void setGoal(const T& goal)
@@ -90,7 +90,9 @@ public:
 
         const T error = goal_ - measured_;
 
-        float dt = clock_ == nullptr ? 1 : (clock_->millis() - last_time_) * config_.time_scale;
+        float dt = clock_ == nullptr ? 1 :
+            (clock_->millis() - last_time_)
+            * config_.time_scale;
 
         float pterm = error * config_.kp;
         float dterm = 0;
@@ -112,7 +114,7 @@ public:
 
 private:
     //TODO: replace with std::clamp after moving to C++17
-    static T clip(T val, T min_value, T max_value)
+    static T clip(T val, T min_value, T max_value) 
     {
         return std::max(min_value, std::min(val, max_value));
     }
@@ -129,5 +131,6 @@ private:
 
     std::unique_ptr<IPidIntegrator<T>> integrator;
 };
+
 
 } //namespace

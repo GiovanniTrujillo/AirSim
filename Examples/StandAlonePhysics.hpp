@@ -5,10 +5,10 @@
 #include "physics/FastPhysicsEngine.hpp"
 #include "physics/DebugPhysicsBody.hpp"
 
-class StandAlonePhysics
-{
+
+class StandAlonePhysics {
 public:
-    static void testCollision()
+    static void testCollison()
     {
         using namespace msr::airlib;
 
